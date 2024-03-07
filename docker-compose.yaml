@@ -1,0 +1,52 @@
+---
+volumes:
+    prometheus-data:
+        driver: local
+    grafana-data:
+        driver: local
+services:
+    prometheus:
+        image: prom/prometheus:v2.50.1
+        container_name: prometheus
+        ports:
+            - 9090:9090
+        volumes:
+            - "./prometheus:/etc/prometheus" # This is the path to the prometheus.yml file.
+            - ./data:/prometheus
+        command: "--config.file=/etc/prometheus/prometheus.yaml"
+        restart: unless-stopped
+
+    grafana:
+        image: grafana/grafana-oss:10.3.3
+        container_name: grafana
+        ports:
+            - "3000:3000"
+        volumes:
+            - grafana-data:/var/lib/grafana
+        restart: unless-stopped
+
+    node_exporter:
+        image: quay.io/prometheus/node-exporter:v1.5.0
+        container_name: node_exporter
+        command: "--path.rootfs=/host"
+        pid: host
+        restart: unless-stopped
+        volumes:
+            - /:/host:ro,rslave
+
+    cadvisor:
+        image: gcr.io/cadvisor/cadvisor:v0.47.0
+        container_name: cadvisor
+        ports:
+            - 8080:8080
+        volumes:
+            # Read the issue for wsl: https://github.com/google/cadvisor/issues/2648
+            # - /:/rootfs:ro
+            - /var/run:/var/run:ro
+            - /sys:/sys:ro
+            - /var/lib/docker:/var/lib/docker:ro
+            - /dev/disk/:/dev/disk:ro
+        devices:
+            - /dev/kmsg
+        privileged: true
+        restart: unless-stopped
